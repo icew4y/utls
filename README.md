@@ -273,7 +273,7 @@ Here's how default "crypto/tls" is typically used:
     //...
 ```
 To start using using uTLS:
-1. Import this library (e.g. `import tls "github.com/refraction-networking/utls"`)
+1. Import this library (e.g. `import tls "github.com/icew4y/utls"`)
 2. Pick the [Client Hello ID](#client-hello-ids)
 3. Simply substitute `tlsConn := tls.Client(dialConn, &config)`
 with `tlsConn := tls.UClient(dialConn, &config, tls.clientHelloID)`  
