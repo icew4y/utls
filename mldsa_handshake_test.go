@@ -9,6 +9,8 @@ import (
 )
 
 func TestHandshakeServerMLDSACertificateTLS13(t *testing.T) {
+	requireGoMLDSASupported(t)
+
 	for _, test := range mldsaHandshakeTests() {
 		t.Run(test.name, func(t *testing.T) {
 			serverCert, err := X509KeyPair([]byte(test.serverCertPEM), []byte(testingKeyToPrivateKeyPEM(test.serverKeyPEM)))
@@ -55,6 +57,8 @@ func TestHandshakeServerMLDSACertificateTLS13(t *testing.T) {
 }
 
 func TestHandshakeClientMLDSACertificateTLS13(t *testing.T) {
+	requireGoMLDSASupported(t)
+
 	for _, test := range mldsaHandshakeTests() {
 		t.Run(test.name, func(t *testing.T) {
 			serverCert, err := X509KeyPair([]byte(test.serverCertPEM), []byte(testingKeyToPrivateKeyPEM(test.serverKeyPEM)))

@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        go: ["1.24.x"]
+        go: ["1.27.x"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -26,4 +26,10 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Test
+        run: go test -v ./...
+      - name: Test without ML-DSA TLS support
+        run: go test -v -tags nomldsa ./...
+      - name: Test with FIPS 140-3 module v1.0.0
+        env:
+          GOFIPS140: v1.0.0
         run: go test -v ./...

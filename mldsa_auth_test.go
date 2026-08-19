@@ -4,57 +4,49 @@ package tls
 
 import (
 	"crypto"
+	"crypto/fips140"
+	"crypto/mldsa"
 	"testing"
-
-	"github.com/cloudflare/circl/sign/mldsa/mldsa44"
-	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
-	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
 )
 
+func TestGoMLDSASupportedMatchesFIPSModule(t *testing.T) {
+	want := fips140.Version() != "v1.0.0"
+	if got := goMLDSASupported(); got != want {
+		t.Fatalf("goMLDSASupported() = %v, want %v for FIPS module %s", got, want, fips140.Version())
+	}
+}
+
 func TestLegacyTypeAndHashRejectsMLDSA(t *testing.T) {
-	pub, _, err := mldsa44.GenerateKey(nil)
+	requireGoMLDSASupported(t)
+
+	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := legacyTypeAndHashFromPublicKey(pub); err == nil {
+	if _, _, err := legacyTypeAndHashFromPublicKey(priv.PublicKey()); err == nil {
 		t.Fatal("legacy signature path accepted ML-DSA")
 	}
 }
 
-func TestMLDSACIRCLVerifyHandshakeSignature(t *testing.T) {
+func TestMLDSAStandardLibraryVerifyHandshakeSignature(t *testing.T) {
+	requireGoMLDSASupported(t)
+
 	tests := []struct {
-		name string
-		gen  func() (crypto.PublicKey, crypto.Signer, error)
+		name   string
+		params mldsa.Parameters
 	}{
-		{
-			name: "mldsa44",
-			gen: func() (crypto.PublicKey, crypto.Signer, error) {
-				pub, priv, err := mldsa44.GenerateKey(nil)
-				return pub, priv, err
-			},
-		},
-		{
-			name: "mldsa65",
-			gen: func() (crypto.PublicKey, crypto.Signer, error) {
-				pub, priv, err := mldsa65.GenerateKey(nil)
-				return pub, priv, err
-			},
-		},
-		{
-			name: "mldsa87",
-			gen: func() (crypto.PublicKey, crypto.Signer, error) {
-				pub, priv, err := mldsa87.GenerateKey(nil)
-				return pub, priv, err
-			},
-		},
+		{"mldsa44", mldsa.MLDSA44()},
+		{"mldsa65", mldsa.MLDSA65()},
+		{"mldsa87", mldsa.MLDSA87()},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			pub, priv, err := test.gen()
+			priv, err := mldsa.GenerateKey(test.params)
 			if err != nil {
 				t.Fatal(err)
 			}
+			pub := priv.PublicKey()
 			msg := []byte("uTLS ML-DSA CertificateVerify input")
 			sig, err := priv.Sign(nil, msg, crypto.Hash(0))
 			if err != nil {
@@ -72,10 +64,13 @@ func TestMLDSACIRCLVerifyHandshakeSignature(t *testing.T) {
 }
 
 func TestVerifyHandshakeSignatureMLDSARequiresDirectSigning(t *testing.T) {
-	pub, priv, err := mldsa44.GenerateKey(nil)
+	requireGoMLDSASupported(t)
+
+	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
 	if err != nil {
 		t.Fatal(err)
 	}
+	pub := priv.PublicKey()
 	msg := []byte("uTLS ML-DSA CertificateVerify input")
 	sig, err := priv.Sign(nil, msg, crypto.Hash(0))
 	if err != nil {
@@ -87,6 +82,8 @@ func TestVerifyHandshakeSignatureMLDSARequiresDirectSigning(t *testing.T) {
 }
 
 func TestSelectSignatureSchemeMLDSARequiresTLS13(t *testing.T) {
+	requireGoMLDSASupported(t)
+
 	cert, err := X509KeyPair([]byte(testMLDSA44CertPEM), []byte(testingKeyToPrivateKeyPEM(testMLDSA44KeyPEM)))
 	if err != nil {
 		t.Fatal(err)

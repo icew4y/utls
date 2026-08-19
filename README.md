@@ -4,7 +4,18 @@
 ---
 uTLS is a fork of "crypto/tls", which provides ClientHello fingerprinting resistance, low-level access to handshake, fake session tickets and some other features. Handshake is still performed by "crypto/tls", this library merely changes ClientHello part of it and provides low-level access.  
 
-**Minimum Go Version**: Go 1.21 
+**Minimum Go Version**: Go 1.27
+
+### ML-DSA compatibility
+
+ML-DSA support uses the Go standard library's `crypto/mldsa` implementation.
+`X509KeyPair` accepts RFC 9881 seed-only and seed-plus-expanded PKCS#8 private
+keys, but not expanded-only keys. Programmatically supplied ML-DSA certificate
+keys must use `*crypto/mldsa.PrivateKey`; CIRCL key types are no longer accepted.
+
+The `nomldsa` build tag disables TLS-level ML-DSA certificate authentication and
+default advertisement. Go 1.27's `crypto/x509` may still verify ML-DSA signatures
+within otherwise supported certificate chains.
 
 If you have any questions, bug reports or contributions, you are welcome to publish those on GitHub. If you want to do so in private, ~~you can contact one of developers personally via sergey.frolov@colorado.edu~~.
 

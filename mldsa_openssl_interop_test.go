@@ -23,6 +23,7 @@ import (
 const opensslInteropImage = "alpine:edge"
 
 func TestOpenSSLMLDSAInterop(t *testing.T) {
+	requireGoMLDSASupported(t)
 	requireDocker(t)
 
 	workDir := t.TempDir()
@@ -142,20 +143,16 @@ func TestOpenSSLMLDSAInterop(t *testing.T) {
 		expectMLDSAPublicKey(t, client.ConnectionState().PeerCertificates[0].PublicKey, MLDSA44)
 		client.Close()
 
-		// crypto/x509 cannot verify ML-DSA chain signatures: trusting the
-		// ML-DSA root must still fail verification. If this starts passing,
-		// the classical-issuer-only restriction can be lifted.
-		err := utlsHandshakeErr(t, hostAddr, &Config{
+		// Go 1.27 crypto/x509 verifies ML-DSA chain signatures, so trusting
+		// the ML-DSA root must allow a fully verified handshake.
+		client = dialUTLSWithRetry(t, hostAddr, &Config{
 			ServerName: "localhost",
 			RootCAs:    loadInteropCertPool(t, workDir, "mldsa-ca.crt"),
 			MinVersion: VersionTLS13,
 			MaxVersion: VersionTLS13,
 		}, HelloChrome_150)
-		var unknownAuthority x509.UnknownAuthorityError
-		if !errors.As(err, &unknownAuthority) {
-			t.Fatalf("handshake error = %v, want x509.UnknownAuthorityError", err)
-		}
-		t.Logf("pure ML-DSA chain rejected as expected: %v", err)
+		expectMLDSAPublicKey(t, client.ConnectionState().PeerCertificates[0].PublicKey, MLDSA44)
+		client.Close()
 	})
 }
 
