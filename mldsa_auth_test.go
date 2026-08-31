@@ -4,8 +4,22 @@ import (
 	"crypto"
 	"crypto/fips140"
 	"crypto/mldsa"
+	"crypto/x509"
+	"encoding/pem"
+	"io"
+	"strings"
 	"testing"
 )
+
+type testMLDSASigner struct {
+	pub crypto.PublicKey
+}
+
+func (s testMLDSASigner) Public() crypto.PublicKey { return s.pub }
+
+func (s testMLDSASigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) {
+	panic("testMLDSASigner.Sign called")
+}
 
 func TestGoMLDSASupportedMatchesFIPSModule(t *testing.T) {
 	want := fips140.Version() != "v1.0.0"
@@ -95,5 +109,42 @@ func TestSelectSignatureSchemeMLDSARequiresTLS13(t *testing.T) {
 	}
 	if got != MLDSA44 {
 		t.Fatalf("selected %v, want %v", got, MLDSA44)
+	}
+}
+
+func TestSelectSignatureSchemeMLDSAFollowsGoSupport(t *testing.T) {
+	var pub crypto.PublicKey
+	if goMLDSASupported() {
+		block, _ := pem.Decode([]byte(testMLDSA44CertPEM))
+		if block == nil {
+			t.Fatal("failed to decode ML-DSA certificate")
+		}
+		x509Cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pub = x509Cert.PublicKey
+	} else {
+		// The v1.0 module cannot construct a usable ML-DSA key. A zero key is
+		// sufficient here because availability must be checked before parameters.
+		pub = new(mldsa.PublicKey)
+	}
+	cert := &Certificate{PrivateKey: testMLDSASigner{pub: pub}}
+
+	got, err := selectSignatureScheme(VersionTLS13, cert, []SignatureScheme{MLDSA44})
+	if goMLDSASupported() {
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != MLDSA44 {
+			t.Fatalf("selected %v, want %v", got, MLDSA44)
+		}
+		return
+	}
+	if err == nil {
+		t.Fatal("selected ML-DSA with an unsupported FIPS module")
+	}
+	if !strings.Contains(err.Error(), "unavailable") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
