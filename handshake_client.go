@@ -10,6 +10,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/mlkem"
 	"crypto/rsa"
 	"crypto/subtle"
@@ -1220,17 +1221,15 @@ func (c *Conn) verifyServerCertificate(certificates [][]byte) error {
 		}
 	}
 
-	switch pub := certs[0].PublicKey.(type) {
+	switch certs[0].PublicKey.(type) {
 	case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
 		break
-	default:
-		if isMLDSAPublicKey(pub) {
-			if c.vers < VersionTLS13 {
-				c.sendAlert(alertUnsupportedCertificate)
-				return errors.New("tls: ML-DSA certificates require TLS 1.3")
-			}
-			break
+	case *mldsa.PublicKey:
+		if c.vers < VersionTLS13 {
+			c.sendAlert(alertUnsupportedCertificate)
+			return errors.New("tls: ML-DSA certificates require TLS 1.3")
 		}
+	default:
 		c.sendAlert(alertUnsupportedCertificate)
 		return fmt.Errorf("tls: server's certificate contains an unsupported type of public key: %T", certs[0].PublicKey)
 	}

@@ -9,13 +9,12 @@ uTLS is a fork of "crypto/tls", which provides ClientHello fingerprinting resist
 ### ML-DSA compatibility
 
 ML-DSA support uses the Go standard library's `crypto/mldsa` implementation.
-`X509KeyPair` accepts RFC 9881 seed-only and seed-plus-expanded PKCS#8 private
-keys, but not expanded-only keys. Programmatically supplied ML-DSA certificate
-keys must use `*crypto/mldsa.PrivateKey`; CIRCL key types are no longer accepted.
+`X509KeyPair` accepts the RFC 9881 seed-only PKCS#8 private keys supported by
+Go's `crypto/x509`. Programmatically supplied certificate keys may use any
+`crypto.Signer` whose public key is a `*crypto/mldsa.PublicKey`.
 
-The `nomldsa` build tag disables TLS-level ML-DSA certificate authentication and
-default advertisement. Go 1.27's `crypto/x509` may still verify ML-DSA signatures
-within otherwise supported certificate chains.
+ML-DSA is unavailable when Go is built with the FIPS 140-3 module v1.0.0,
+which predates ML-DSA support.
 
 If you have any questions, bug reports or contributions, you are welcome to publish those on GitHub. If you want to do so in private, ~~you can contact one of developers personally via sergey.frolov@colorado.edu~~.
 

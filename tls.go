@@ -17,6 +17,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -226,11 +227,8 @@ func (d *Dialer) DialContext(ctx context.Context, network, addr string) (net.Con
 // LoadX509KeyPair reads and parses a public/private key pair from a pair of
 // files. The files must contain PEM encoded data. The certificate file may
 // contain intermediate certificates following the leaf certificate to form a
-// certificate chain. On successful return, Certificate.Leaf will be populated.
-//
-// Before Go 1.23 Certificate.Leaf was left nil, and the parsed certificate was
-// discarded. This behavior can be re-enabled by setting "x509keypairleaf=0"
-// in the GODEBUG environment variable.
+// certificate chain. Certificate.Leaf is left nil for compatibility with
+// earlier uTLS releases.
 func LoadX509KeyPair(certFile, keyFile string) (Certificate, error) {
 	certPEMBlock, err := os.ReadFile(certFile)
 	if err != nil {
@@ -246,11 +244,8 @@ func LoadX509KeyPair(certFile, keyFile string) (Certificate, error) {
 // var x509keypairleaf = godebug.New("x509keypairleaf") [uTLS]
 
 // X509KeyPair parses a public/private key pair from a pair of
-// PEM encoded data. On successful return, Certificate.Leaf will be populated.
-//
-// Before Go 1.23 Certificate.Leaf was left nil, and the parsed certificate was
-// discarded. This behavior can be re-enabled by setting "x509keypairleaf=0"
-// in the GODEBUG environment variable.
+// PEM encoded data. Certificate.Leaf is left nil for compatibility with
+// earlier uTLS releases.
 func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 	fail := func(err error) (Certificate, error) { return Certificate{}, err }
 
@@ -300,12 +295,10 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 
 	// We don't need to parse the public key for TLS, but we so do anyway
 	// to check that it looks sane and matches the private key.
-	x509Cert, err := parseCertificate(cert.Certificate[0])
+	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
 	if err != nil {
 		return fail(err)
 	}
-
-	cert.Leaf = x509Cert
 
 	cert.PrivateKey, err = parsePrivateKey(keyDERBlock.Bytes)
 	if err != nil {
@@ -337,13 +330,15 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 		if !bytes.Equal(priv.Public().(ed25519.PublicKey), pub) {
 			return fail(errors.New("tls: private key does not match public key"))
 		}
-	default:
-		if isMLDSAPublicKey(pub) {
-			if !publicKeyMatchesMLDSAPrivateKey(pub, cert.PrivateKey) {
-				return fail(errors.New("tls: private key does not match public key"))
-			}
-			break
+	case *mldsa.PublicKey:
+		priv, ok := cert.PrivateKey.(*mldsa.PrivateKey)
+		if !ok {
+			return fail(errors.New("tls: private key type does not match public key type"))
 		}
+		if !priv.PublicKey().Equal(pub) {
+			return fail(errors.New("tls: private key does not match public key"))
+		}
+	default:
 		return fail(errors.New("tls: unknown public key algorithm"))
 	}
 
@@ -359,17 +354,11 @@ func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
 	}
 	if key, err := x509.ParsePKCS8PrivateKey(der); err == nil {
 		switch key := key.(type) {
-		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
+		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey, *mldsa.PrivateKey:
 			return key, nil
 		default:
-			if isMLDSAPrivateKey(key) {
-				return key, nil
-			}
 			return nil, errors.New("tls: found unknown private key type in PKCS#8 wrapping")
 		}
-	}
-	if key, err := parseMLDSAPrivateKey(der); err == nil {
-		return key, nil
 	}
 	if key, err := x509.ParseECPrivateKey(der); err == nil {
 		return key, nil

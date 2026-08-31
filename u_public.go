@@ -78,10 +78,6 @@ func (chs *TLS13OnlyState) private13KeyShareKeys() *keySharePrivateKeys {
 	return nil
 }
 
-// func kyberGoToCircl(kyberKey *mlkem768.DecapsulationKey, ecdhKey *ecdh.PrivateKey) (kem.PrivateKey, error) {
-// 	return hybrid.Kyber768X25519().UnmarshalBinaryPrivateKey(append(ecdhKey.Bytes(), kyberKey.Bytes()...))
-// }
-
 func (chs *PubClientHandshakeState) toPrivate13() *clientHandshakeStateTLS13 {
 	if chs == nil {
 		return nil

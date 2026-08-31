@@ -234,7 +234,7 @@ func TestHelloChrome150PrependsMLDSASignatureAlgorithms(t *testing.T) {
 }
 
 func TestHelloChromeAutoTracksGoMLDSASupport(t *testing.T) {
-	expected := HelloChrome_133
+	expected := HelloChrome_146
 	if goMLDSASupported() {
 		expected = HelloChrome_150
 	}

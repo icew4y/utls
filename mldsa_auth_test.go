@@ -1,5 +1,3 @@
-//go:build !nomldsa
-
 package tls
 
 import (
@@ -52,11 +50,11 @@ func TestMLDSAStandardLibraryVerifyHandshakeSignature(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := verifyMLDSAHandshakeSignature(pub, msg, sig); err != nil {
+			if err := verifyHandshakeSignature(signatureMLDSA, pub, directSigning, msg, sig); err != nil {
 				t.Fatalf("valid signature rejected: %v", err)
 			}
 			sig[0] ^= 0x80
-			if err := verifyMLDSAHandshakeSignature(pub, msg, sig); err == nil {
+			if err := verifyHandshakeSignature(signatureMLDSA, pub, directSigning, msg, sig); err == nil {
 				t.Fatal("invalid signature accepted")
 			}
 		})

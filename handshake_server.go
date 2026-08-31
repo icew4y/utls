@@ -9,6 +9,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/subtle"
 	"crypto/x509"
@@ -913,7 +914,7 @@ func (c *Conn) processCertsFromClient(certificate Certificate) error {
 	certs := make([]*x509.Certificate, len(certificates))
 	var err error
 	for i, asn1Data := range certificates {
-		if certs[i], err = parseCertificate(asn1Data); err != nil {
+		if certs[i], err = x509.ParseCertificate(asn1Data); err != nil {
 			c.sendAlert(alertBadCertificate)
 			return errors.New("tls: failed to parse client certificate: " + err.Error())
 		}
@@ -972,16 +973,14 @@ func (c *Conn) processCertsFromClient(certificate Certificate) error {
 	c.scts = certificate.SignedCertificateTimestamps
 
 	if len(certs) > 0 {
-		switch pub := certs[0].PublicKey.(type) {
+		switch certs[0].PublicKey.(type) {
 		case *ecdsa.PublicKey, *rsa.PublicKey, ed25519.PublicKey:
-		default:
-			if isMLDSAPublicKey(pub) {
-				if c.vers < VersionTLS13 {
-					c.sendAlert(alertUnsupportedCertificate)
-					return errors.New("tls: ML-DSA certificates require TLS 1.3")
-				}
-				break
+		case *mldsa.PublicKey:
+			if c.vers < VersionTLS13 {
+				c.sendAlert(alertUnsupportedCertificate)
+				return errors.New("tls: ML-DSA certificates require TLS 1.3")
 			}
+		default:
 			c.sendAlert(alertUnsupportedCertificate)
 			return fmt.Errorf("tls: client certificate contains an unsupported public key of type %T", certs[0].PublicKey)
 		}
