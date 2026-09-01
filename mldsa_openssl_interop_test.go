@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build opensslinterop && !nomldsa
+//go:build opensslinterop
 
 package tls
 
@@ -23,6 +23,7 @@ import (
 const opensslInteropImage = "alpine:edge"
 
 func TestOpenSSLMLDSAInterop(t *testing.T) {
+	requireMLDSAAvailable(t)
 	requireDocker(t)
 
 	workDir := t.TempDir()
@@ -142,20 +143,16 @@ func TestOpenSSLMLDSAInterop(t *testing.T) {
 		expectMLDSAPublicKey(t, client.ConnectionState().PeerCertificates[0].PublicKey, MLDSA44)
 		client.Close()
 
-		// crypto/x509 cannot verify ML-DSA chain signatures: trusting the
-		// ML-DSA root must still fail verification. If this starts passing,
-		// the classical-issuer-only restriction can be lifted.
-		err := utlsHandshakeErr(t, hostAddr, &Config{
+		// Go 1.27 crypto/x509 verifies ML-DSA chain signatures, so trusting
+		// the ML-DSA root must allow a fully verified handshake.
+		client = dialUTLSWithRetry(t, hostAddr, &Config{
 			ServerName: "localhost",
 			RootCAs:    loadInteropCertPool(t, workDir, "mldsa-ca.crt"),
 			MinVersion: VersionTLS13,
 			MaxVersion: VersionTLS13,
 		}, HelloChrome_150)
-		var unknownAuthority x509.UnknownAuthorityError
-		if !errors.As(err, &unknownAuthority) {
-			t.Fatalf("handshake error = %v, want x509.UnknownAuthorityError", err)
-		}
-		t.Logf("pure ML-DSA chain rejected as expected: %v", err)
+		expectMLDSAPublicKey(t, client.ConnectionState().PeerCertificates[0].PublicKey, MLDSA44)
+		client.Close()
 	})
 }
 
@@ -220,15 +217,15 @@ func generateOpenSSLMLDSACerts(t *testing.T, workDir string) {
 		"openssl version",
 		"openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca.key",
 		"openssl req -x509 -new -key ca.key -sha256 -days 30 -subj '/CN=utls interop test root' -out ca.crt",
-		"openssl genpkey -algorithm ML-DSA-44 -out server.key",
+		"openssl genpkey -provparam ml-dsa.output_formats=seed-only -algorithm ML-DSA-44 -out server.key",
 		"openssl req -new -key server.key -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' -out server.csr",
 		"openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 30 -copy_extensions copy -out server.crt",
 		"openssl x509 -in server.crt -noout -text | grep -E 'Public Key Algorithm|Signature Algorithm'",
 		"openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out wrongca.key",
 		"openssl req -x509 -new -key wrongca.key -sha256 -days 30 -subj '/CN=utls interop wrong root' -out wrongca.crt",
-		"openssl genpkey -algorithm ML-DSA-44 -out mldsa-ca.key",
+		"openssl genpkey -provparam ml-dsa.output_formats=seed-only -algorithm ML-DSA-44 -out mldsa-ca.key",
 		"openssl req -x509 -new -key mldsa-ca.key -days 30 -subj '/CN=utls interop ML-DSA root' -out mldsa-ca.crt",
-		"openssl genpkey -algorithm ML-DSA-44 -out pqserver.key",
+		"openssl genpkey -provparam ml-dsa.output_formats=seed-only -algorithm ML-DSA-44 -out pqserver.key",
 		"openssl req -new -key pqserver.key -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' -out pqserver.csr",
 		"openssl x509 -req -in pqserver.csr -CA mldsa-ca.crt -CAkey mldsa-ca.key -CAcreateserial -days 30 -copy_extensions copy -out pqserver.crt",
 		"openssl x509 -in pqserver.crt -noout -text | grep -E 'Public Key Algorithm|Signature Algorithm'",

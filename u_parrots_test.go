@@ -233,9 +233,9 @@ func TestHelloChrome150PrependsMLDSASignatureAlgorithms(t *testing.T) {
 	}
 }
 
-func TestHelloChromeAutoTracksGoMLDSASupport(t *testing.T) {
-	expected := HelloChrome_133
-	if goMLDSASupported() {
+func TestHelloChromeAutoTracksMLDSAAvailability(t *testing.T) {
+	expected := HelloChrome_146
+	if mldsaAvailable() {
 		expected = HelloChrome_150
 	}
 	if HelloChrome_Auto != expected {

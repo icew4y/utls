@@ -1544,7 +1544,7 @@ func (cri *CertificateRequestInfo) SupportsCertificate(c *Certificate) error {
 		// chain.Leaf was nil.
 		if j != 0 || x509Cert == nil {
 			var err error
-			if x509Cert, err = parseCertificate(cert); err != nil {
+			if x509Cert, err = x509.ParseCertificate(cert); err != nil {
 				return fmt.Errorf("failed to parse certificate #%d in the chain: %w", j, err)
 			}
 		}
@@ -1640,7 +1640,7 @@ func (c *Certificate) leaf() (*x509.Certificate, error) {
 	if c.Leaf != nil {
 		return c.Leaf, nil
 	}
-	return parseCertificate(c.Certificate[0])
+	return x509.ParseCertificate(c.Certificate[0])
 }
 
 type handshakeMessage interface {
@@ -1748,7 +1748,11 @@ func unexpectedMessageError(wanted, got any) error {
 func supportedSignatureAlgorithms() []SignatureScheme {
 	// [uTLS] SECTION BEGIN
 	// if !fips140tls.Required() {
-	return defaultSupportedSignatureAlgorithms
+	sigAlgs := defaultSupportedSignatureAlgorithms
+	if !mldsaAvailable() {
+		sigAlgs = slices.DeleteFunc(slices.Clone(sigAlgs), isMLDSASignatureScheme)
+	}
+	return sigAlgs
 	// }
 	// return defaultSupportedSignatureAlgorithmsFIPS
 	// [uTLS] SECTION END

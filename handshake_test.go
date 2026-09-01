@@ -425,6 +425,18 @@ func TestMain(m *testing.M) {
 }
 
 func runMain(m *testing.M) int {
+	// The replay fixtures use Config.Rand to make TLS handshakes deterministic.
+	// Go 1.27 ignores custom cryptographic random readers unless this transition
+	// setting is enabled, so apply it to the entire test process.
+	godebug := os.Getenv("GODEBUG")
+	if godebug != "" {
+		godebug += ","
+	}
+	if err := os.Setenv("GODEBUG", godebug+"cryptocustomrand=1"); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to set GODEBUG: %v\n", err)
+		return 1
+	}
+
 	// Cipher suites preferences change based on the architecture. Force them to
 	// the version without AES acceleration for test consistency.
 	hasAESGCMHardwareSupport = false

@@ -5,6 +5,7 @@
 package tls
 
 import (
+	"crypto/fips140"
 	"slices"
 	_ "unsafe" // for linkname
 )
@@ -30,7 +31,10 @@ func defaultCurvePreferences() []CurveID {
 // the code advertises as supported in a TLS 1.2+ ClientHello and in a TLS 1.2+
 // CertificateRequest. The two fields are merged to match with TLS 1.3.
 // Note that in TLS 1.2, the ECDSA algorithms are not constrained to P-256, etc.
-var defaultSupportedSignatureAlgorithms = append(defaultMLDSASignatureAlgorithms(),
+var defaultSupportedSignatureAlgorithms = []SignatureScheme{
+	MLDSA44,
+	MLDSA65,
+	MLDSA87,
 	PSSWithSHA256,
 	ECDSAWithP256AndSHA256,
 	Ed25519,
@@ -43,7 +47,11 @@ var defaultSupportedSignatureAlgorithms = append(defaultMLDSASignatureAlgorithms
 	ECDSAWithP521AndSHA512,
 	PKCS1WithSHA1,
 	ECDSAWithSHA1,
-)
+}
+
+func mldsaAvailable() bool {
+	return fips140.Version() != "v1.0.0"
+}
 
 // [uTLS section begins]
 // var tlsrsakex = godebug.New("tlsrsakex")

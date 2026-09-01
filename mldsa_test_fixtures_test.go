@@ -1,6 +1,13 @@
-//go:build !nomldsa
-
 package tls
+
+import "testing"
+
+func requireMLDSAAvailable(t *testing.T) {
+	t.Helper()
+	if !mldsaAvailable() {
+		t.Skip("crypto/mldsa is unavailable in this Go FIPS module")
+	}
+}
 
 // Static fixtures copied from Go upstream's ML-DSA TLS work
 // (certificates_test.go at go.googlesource.com/go commit c74ba7d26551):
