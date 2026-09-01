@@ -2,9 +2,9 @@ package tls
 
 import "testing"
 
-func requireGoMLDSASupported(t *testing.T) {
+func requireMLDSAAvailable(t *testing.T) {
 	t.Helper()
-	if !goMLDSASupported() {
+	if !mldsaAvailable() {
 		t.Skip("crypto/mldsa is unavailable in this Go FIPS module")
 	}
 }

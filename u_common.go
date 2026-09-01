@@ -681,7 +681,7 @@ var (
 )
 
 func defaultChromeAutoID() ClientHelloID {
-	if goMLDSASupported() {
+	if mldsaAvailable() {
 		return HelloChrome_150
 	}
 	return HelloChrome_146

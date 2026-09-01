@@ -21,15 +21,15 @@ func (s testMLDSASigner) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, err
 	panic("testMLDSASigner.Sign called")
 }
 
-func TestGoMLDSASupportedMatchesFIPSModule(t *testing.T) {
+func TestMLDSAAvailableMatchesFIPSModule(t *testing.T) {
 	want := fips140.Version() != "v1.0.0"
-	if got := goMLDSASupported(); got != want {
-		t.Fatalf("goMLDSASupported() = %v, want %v for FIPS module %s", got, want, fips140.Version())
+	if got := mldsaAvailable(); got != want {
+		t.Fatalf("mldsaAvailable() = %v, want %v for FIPS module %s", got, want, fips140.Version())
 	}
 }
 
 func TestLegacyTypeAndHashRejectsMLDSA(t *testing.T) {
-	requireGoMLDSASupported(t)
+	requireMLDSAAvailable(t)
 
 	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
 	if err != nil {
@@ -41,7 +41,7 @@ func TestLegacyTypeAndHashRejectsMLDSA(t *testing.T) {
 }
 
 func TestMLDSAStandardLibraryVerifyHandshakeSignature(t *testing.T) {
-	requireGoMLDSASupported(t)
+	requireMLDSAAvailable(t)
 
 	tests := []struct {
 		name   string
@@ -76,7 +76,7 @@ func TestMLDSAStandardLibraryVerifyHandshakeSignature(t *testing.T) {
 }
 
 func TestVerifyHandshakeSignatureMLDSARequiresDirectSigning(t *testing.T) {
-	requireGoMLDSASupported(t)
+	requireMLDSAAvailable(t)
 
 	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
 	if err != nil {
@@ -94,7 +94,7 @@ func TestVerifyHandshakeSignatureMLDSARequiresDirectSigning(t *testing.T) {
 }
 
 func TestSelectSignatureSchemeMLDSARequiresTLS13(t *testing.T) {
-	requireGoMLDSASupported(t)
+	requireMLDSAAvailable(t)
 
 	cert, err := X509KeyPair([]byte(testMLDSA44CertPEM), []byte(testingKeyToPrivateKeyPEM(testMLDSA44KeyPEM)))
 	if err != nil {
@@ -112,9 +112,9 @@ func TestSelectSignatureSchemeMLDSARequiresTLS13(t *testing.T) {
 	}
 }
 
-func TestSelectSignatureSchemeMLDSAFollowsGoSupport(t *testing.T) {
+func TestSelectSignatureSchemeMLDSAFollowsAvailability(t *testing.T) {
 	var pub crypto.PublicKey
-	if goMLDSASupported() {
+	if mldsaAvailable() {
 		block, _ := pem.Decode([]byte(testMLDSA44CertPEM))
 		if block == nil {
 			t.Fatal("failed to decode ML-DSA certificate")
@@ -132,7 +132,7 @@ func TestSelectSignatureSchemeMLDSAFollowsGoSupport(t *testing.T) {
 	cert := &Certificate{PrivateKey: testMLDSASigner{pub: pub}}
 
 	got, err := selectSignatureScheme(VersionTLS13, cert, []SignatureScheme{MLDSA44})
-	if goMLDSASupported() {
+	if mldsaAvailable() {
 		if err != nil {
 			t.Fatal(err)
 		}

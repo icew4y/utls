@@ -229,7 +229,7 @@ func signatureSchemesForCertificate(version uint16, cert *Certificate) []Signatu
 	case ed25519.PublicKey:
 		sigAlgs = []SignatureScheme{Ed25519}
 	case *mldsa.PublicKey:
-		if version != VersionTLS13 || !goMLDSASupported() {
+		if version != VersionTLS13 || !mldsaAvailable() {
 			return nil
 		}
 		switch pub.Parameters() {
@@ -316,7 +316,7 @@ func unsupportedCertificateError(cert *Certificate) error {
 		return fmt.Errorf("tls: certificate RSA key size too small for supported signature algorithms")
 	case ed25519.PublicKey:
 	case *mldsa.PublicKey:
-		if !goMLDSASupported() {
+		if !mldsaAvailable() {
 			return errors.New("tls: ML-DSA is unavailable with the selected FIPS 140-3 module")
 		}
 		return errors.New("tls: ML-DSA certificates require TLS 1.3")

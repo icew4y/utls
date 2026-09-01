@@ -172,11 +172,11 @@ func TestMLDSASignatureSchemeUsesDirectSigning(t *testing.T) {
 	}
 }
 
-func TestDefaultSupportedSignatureAlgorithmsFollowGoMLDSASupport(t *testing.T) {
+func TestDefaultSupportedSignatureAlgorithmsFollowMLDSAAvailability(t *testing.T) {
 	for _, sigAlg := range []SignatureScheme{MLDSA44, MLDSA65, MLDSA87} {
 		got := isSupportedSignatureAlgorithm(sigAlg, supportedSignatureAlgorithms())
-		if got != goMLDSASupported() {
-			t.Fatalf("default support for %v = %v, want %v", sigAlg, got, goMLDSASupported())
+		if got != mldsaAvailable() {
+			t.Fatalf("default support for %v = %v, want %v", sigAlg, got, mldsaAvailable())
 		}
 	}
 }
@@ -187,8 +187,8 @@ func TestSupportedSignatureAlgorithmsForVersionGatesMLDSA(t *testing.T) {
 			t.Fatalf("%v advertised for TLS 1.2", sigAlg)
 		}
 		gotTLS13 := isSupportedSignatureAlgorithm(sigAlg, supportedSignatureAlgorithmsForVersion(VersionTLS13))
-		if gotTLS13 != goMLDSASupported() {
-			t.Fatalf("TLS 1.3 support for %v = %v, want %v", sigAlg, gotTLS13, goMLDSASupported())
+		if gotTLS13 != mldsaAvailable() {
+			t.Fatalf("TLS 1.3 support for %v = %v, want %v", sigAlg, gotTLS13, mldsaAvailable())
 		}
 	}
 }

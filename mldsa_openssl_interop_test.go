@@ -23,7 +23,7 @@ import (
 const opensslInteropImage = "alpine:edge"
 
 func TestOpenSSLMLDSAInterop(t *testing.T) {
-	requireGoMLDSASupported(t)
+	requireMLDSAAvailable(t)
 	requireDocker(t)
 
 	workDir := t.TempDir()

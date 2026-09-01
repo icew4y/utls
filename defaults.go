@@ -49,7 +49,7 @@ var defaultSupportedSignatureAlgorithms = []SignatureScheme{
 	ECDSAWithSHA1,
 }
 
-func goMLDSASupported() bool {
+func mldsaAvailable() bool {
 	return fips140.Version() != "v1.0.0"
 }
 

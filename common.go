@@ -1749,7 +1749,7 @@ func supportedSignatureAlgorithms() []SignatureScheme {
 	// [uTLS] SECTION BEGIN
 	// if !fips140tls.Required() {
 	sigAlgs := defaultSupportedSignatureAlgorithms
-	if !goMLDSASupported() {
+	if !mldsaAvailable() {
 		sigAlgs = slices.DeleteFunc(slices.Clone(sigAlgs), isMLDSASignatureScheme)
 	}
 	return sigAlgs

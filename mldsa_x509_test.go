@@ -10,7 +10,7 @@ import (
 )
 
 func TestX509KeyPairUsesStandardLibraryMLDSAKeys(t *testing.T) {
-	requireGoMLDSASupported(t)
+	requireMLDSAAvailable(t)
 
 	tests := []struct {
 		name    string
